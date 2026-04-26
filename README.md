@@ -1,4 +1,4 @@
 Membros:
-Caetano Marasca
-Gustavo Melleu
-Felipe Ferreira
+Caetano Marasca,
+Gustavo Melleu,
+Felipe Ferreira.
