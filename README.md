@@ -3,7 +3,7 @@
 **Sistemas Operacionais – PUCRS**
 Prof. Filipo Mór
 
-| Gustavo Melleu - 22200589 | Felipe Ferreira - 21100492 | Caetano Marasca - 23108514 |
+| Caetano Marasca - 23108514 | Gustavo Melleu - 22200589 | Felipe Ferreira - 21100492 |
 ---
 
 ## 1. Assinatura do Hardware
