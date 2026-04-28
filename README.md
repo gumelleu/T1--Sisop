@@ -156,7 +156,7 @@ ao número de workers.
 
 ## 5. Gráfico de Escalabilidade
 
-<img width="2384" height="770" alt="image" src="https://github.com/user-attachments/assets/631a0ba0-bfe6-4806-b57c-031160da4ebb" />
+![Gráfico de Escalabilidade](grafico.png)
 
 
 O gráfico exibe três painéis:
