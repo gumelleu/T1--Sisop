@@ -35,7 +35,7 @@ make run-all
 
 >  O experimento P2 (processos com semáforo) é extremamente lento
 > porque cada um dos 1.000.000.000 de incrementos exige duas syscalls de kernel
-> (`sem_wait` + `sem_post`). No Apple M4, N=8 levou **6 horas e 18 minutos**.
+> (`sem_wait` + `sem_post`). No Apple M4, N=8 levou **20 minutos e 45 segundos**.
 
 ---
 
@@ -48,7 +48,7 @@ Tempo **real** de execução medido com o comando `time` do shell (coluna `real`
 | **T1** | Threads — sem mutex | 0,522 s | 0,279 s | 0,229 s |
 | **T2** | Threads — pthread_mutex | 6,551 s | 13,185 s | 14,728 s |
 | **P1** | Processos — sem semáforo | 0,523 s | 0,283 s | 0,228 s |
-| **P2** | Processos — sem_open | 23 min 15 s | 20 min 50 s | **6 h 18 min** |
+| **P2** | Processos — sem_open | 23 min 15 s | 20 min 50 s | 20 min 45 s |
 
 <details>
 <summary>Saída completa do comando <code>time</code></summary>
@@ -88,7 +88,7 @@ Tempo **real** de execução medido com o comando `time` do shell (coluna `real`
 ./processes 4 1  167,16s user 1104,03s system 101% cpu 20:50,52 total
 
 --- P2 | N=8 ---
-./processes 8 1  206,02s user 1392,80s system   7% cpu 6:18:01,46 total
+./processes 8 1  163,90s user 1102,83s system 101% cpu 20:45,08 total
 ```
 
 </details>
@@ -164,7 +164,8 @@ O gráfico exibe três painéis:
 - **Esquerda:** T1 vs. P1 (sem sincronização) em escala linear. Ambos ficam abaixo
   de 0,6 s e melhoram com mais workers (paralelismo real no M4).
 - **Centro:** T2 vs. P2 (com sincronização) em escala logarítmica. T2 cresce
-  moderadamente de ~6 s a ~15 s; P2 vai de 23 minutos a **6 horas e 18 minutos**.
+  moderadamente de ~6 s a ~15 s; P2 mantém-se estável em torno de **20–23 minutos**
+  independente do N — o semáforo serializa tudo, então o throughput é fixo.
 - **Direita:** Todos os experimentos em barras com escala logarítmica, evidenciando
   a diferença de mais de 4 ordens de magnitude entre T1/P1 e P2.
 
@@ -197,7 +198,7 @@ adiciona overhead de mapeamento, e cada operação de semáforo (`sem_wait`/`sem
 é uma chamada de sistema completa com transição para o modo kernel.
 
 Esse custo explica o resultado mais dramático do trabalho: P2 com N=8 levou
-**6 horas e 18 minutos** — contra **14,7 segundos** do T2 com N=8 —
+**20 minutos e 45 segundos** — contra **14,7 segundos** do T2 com N=8 —
 fazendo as mesmas 1 bilhão de operações protegidas.
 
 ### Eficiência com Sincronização: Mutex vs. Semáforo Nomeado
@@ -215,13 +216,13 @@ contenção pelo lock. Com N=8, as 8 threads disputam o mesmo mutex, gerando mai
 overhead de context-switch e mais tempo de CPU perdido em espera (kernel time),
 por isso o tempo cresceu de 6,5 s (N=2) para 14,7 s (N=8).
 
-### Por que P2 com N=8 foi mais lento que N=4:
+### Por que P2 mantém tempo estável entre N=2, N=4 e N=8:
 
-Com N=4, os 4 processos alternavam eficientemente no semáforo (~20 min). Com N=8,
-a contenção de 8 processos pelo mesmo semáforo nomeado gerou um nível de contenção
-no kernel que causou degradação massiva: de 20 minutos (N=4) para **6 horas e 18
-minutos** (N=8). O overhead de escalonamento de processos — muito maior que o de
-threads — multiplicou o custo a cada disputa pelo semáforo.
+Com semáforo binário, apenas **1 processo incrementa por vez** — os demais ficam
+bloqueados em `sem_wait`. O throughput total é limitado pela velocidade de uma única
+syscall de kernel, independente do número de processos. Por isso N=2 (23 min),
+N=4 (20 min) e N=8 (20 min) ficam todos na mesma faixa: mais workers não aumentam
+o paralelismo real, só aumentam levemente a contenção pelo semáforo.
 
 ### Resumo Final
 
@@ -230,7 +231,7 @@ threads — multiplicou o custo a cada disputa pelo semáforo.
 | Menor overhead de criação | **Thread** | Compartilha recursos, sem novo PCB |
 | Comunicação mais eficiente | **Thread** | Acesso direto à memória, sem IPC |
 | Melhor escalabilidade sem sync | **Empate** | T1 ≈ P1 em tempo real |
-| Sincronização mais eficiente | **Thread** (mutex) | Mutex ~1540× mais rápido que semáforo nomeado (N=8: 14,7 s vs. 6 h 18 min) |
+| Sincronização mais eficiente | **Thread** (mutex) | Mutex ~85× mais rápido que semáforo nomeado (N=8: 14,7 s vs. 20 min 45 s) |
 
 ---
 
